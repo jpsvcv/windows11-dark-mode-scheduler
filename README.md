@@ -71,6 +71,20 @@ Preview the installation without applying changes:
 .\scripts\install.ps1 -Language en-EN -Latitude 14.9330 -Longitude -23.5133 -TimeZoneId "Cape Verde Standard Time" -WhatIf
 ```
 
+## Coordinate Format
+
+Use decimal degrees when providing coordinates.
+
+- `Latitude`: `-90` to `90`
+- `Longitude`: `-180` to `180`
+- Use `.` as decimal separator for command-line arguments, for example `14.9330`
+
+Examples:
+
+- Praia, Cabo Verde: `-Latitude 14.9330 -Longitude -23.5133`
+- Lisbon, Portugal: `-Latitude 38.7223 -Longitude -9.1393`
+- New York, USA: `-Latitude 40.7128 -Longitude -74.0060`
+
 ## VS Code Theme Selection
 
 When VS Code is detected and `-VSCodeDarkTheme` is not provided, the installer:

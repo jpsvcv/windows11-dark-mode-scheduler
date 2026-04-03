@@ -348,6 +348,30 @@ function Show-InstallerFailure {
     Write-Host ($Messages.OperationFailedMessage -f $ErrorRecord.Exception.Message) -ForegroundColor Red
 }
 
+function Resolve-AutomaticCoordinates {
+    param(
+        [Parameter(Mandatory = $true)]
+        [hashtable]$Messages
+    )
+
+    $attemptTimeouts = @(30, 45)
+    for ($index = 0; $index -lt $attemptTimeouts.Count; $index++) {
+        $timeoutSeconds = $attemptTimeouts[$index]
+        $detectedCoordinates = Get-CoordinatesFromWindowsLocation -TimeoutSeconds $timeoutSeconds
+        if ($null -ne $detectedCoordinates) {
+            return $detectedCoordinates
+        }
+
+        $isLastAttempt = ($index -eq ($attemptTimeouts.Count - 1))
+        if (-not $isLastAttempt) {
+            # Give Windows Location a brief grace period before retrying.
+            Start-Sleep -Seconds 3
+        }
+    }
+
+    return $null
+}
+
 function Test-CommandSetAvailable {
     param(
         [Parameter(Mandatory = $true)]
@@ -823,7 +847,7 @@ function Invoke-InstallAction {
     $coordinateSource = "Manual"
 
     if ($usesAutomaticLocationDetection) {
-        $detectedCoordinates = Get-CoordinatesFromWindowsLocation
+        $detectedCoordinates = Resolve-AutomaticCoordinates -Messages $Messages
         if ($null -eq $detectedCoordinates) {
             Write-Host $Messages.AutoLocationFailed
             $manualCoordinates = Resolve-ManualCoordinates -Messages $Messages

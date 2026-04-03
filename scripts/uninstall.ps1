@@ -31,6 +31,26 @@ if ([string]::IsNullOrWhiteSpace($TaskPrefix)) {
 if ($PSCmdlet.ShouldProcess($installRootPath, "Remove the tool and its Task Scheduler jobs")) {
     Unregister-ThemeSwitchTasks -TaskPrefix $TaskPrefix
 
+    $config = $null
+    if (Test-Path -LiteralPath $configPath) {
+        try {
+            $config = Read-ThemeSwitchConfig -Path $configPath
+        }
+        catch {
+            $config = $null
+        }
+    }
+
+    if ($null -ne $config) {
+        try {
+            # Revert VS Code to the configured light theme before removing files.
+            Set-VSCodeThemePreferences -Config $config -Mode Light | Out-Null
+        }
+        catch {
+            # Ignore VS Code reset errors during removal.
+        }
+    }
+
     # Reset the Windows theme to light before removing the tool.
     try {
         Set-WindowsThemeMode -Mode Light -Force | Out-Null
