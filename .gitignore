@@ -1,5 +1,6 @@
 .history/
 .vscode/
+AGENTS.md
 theme-switch.log
 *.tmp
 *.log
