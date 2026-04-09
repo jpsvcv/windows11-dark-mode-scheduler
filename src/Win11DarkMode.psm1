@@ -1068,11 +1068,12 @@ function Set-VSCodeThemePreferences {
     }
 
     # Tell VS Code to follow the OS color scheme while still pinning the preferred themes.
+    # IMPORTANT: Keep window.autoDetectColorScheme and preferredColorThemes, but don't set workbench.colorTheme
+    # explicitly, as that conflicts with auto-detection. Let VS Code manage the theme selection automatically.
     $updatedContent = $content
     $updatedContent = Set-JsonLikeSetting -Content $updatedContent -Key "window.autoDetectColorScheme" -Value $true
     $updatedContent = Set-JsonLikeSetting -Content $updatedContent -Key "workbench.preferredLightColorTheme" -Value $lightTheme
     $updatedContent = Set-JsonLikeSetting -Content $updatedContent -Key "workbench.preferredDarkColorTheme" -Value $darkTheme
-    $updatedContent = Set-JsonLikeSetting -Content $updatedContent -Key "workbench.colorTheme" -Value $currentTheme
 
     $changed = $updatedContent -cne $content
     if ($changed) {
