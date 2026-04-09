@@ -1,5 +1,9 @@
 # Win11 Auto Appearance Scheduler
 
+![PowerShell Script Analyzer](https://github.com/jpsvcv/windows11-dark-mode-scheduler/actions/workflows/ci.yml/badge.svg)
+![Platform](https://img.shields.io/badge/platform-Windows-blue.svg)
+![License](https://img.shields.io/badge/license-MIT-blue.svg)
+
 Windows 11 utility designed to bring a macOS-like automatic appearance schedule to Windows 11.
 
 The goal is to make Windows 11 behave more like macOS, automatically transitioning between light mode and dark mode either from a user-defined schedule or from local sunrise and sunset detection.
@@ -144,6 +148,32 @@ Run the end-to-end integration tests:
 ```powershell
 .\tests\Invoke-IntegrationTests.ps1
 ```
+
+## Continuous Integration
+
+This repository includes a GitHub Actions workflow that validates PowerShell sources with `PSScriptAnalyzer` on `windows-latest`.
+
+To run the same checks locally:
+
+```powershell
+Install-Module PSScriptAnalyzer -Force -Scope CurrentUser
+Invoke-ScriptAnalyzer -Path .\scripts\install.ps1,.\scripts\uninstall.ps1,.\scripts\check-tasks.ps1,.\src\Win11DarkMode.psm1
+```
+
+## License
+
+This project is released under the MIT License. See `LICENSE` for details.
+
+## Documentation Guide
+
+| Document | Purpose |
+|----------|---------|
+| [PREREQUISITES.md](PREREQUISITES.md) | System requirements and setup guidance |
+| [TROUBLESHOOTING.md](TROUBLESHOOTING.md) | Common issues and solutions |
+| [SECURITY.md](SECURITY.md) | Security considerations and best practices |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | How to contribute to this project |
+| [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) | Community guidelines |
+| [README.pt-PT.md](README.pt-PT.md) | Portuguese documentation |
 
 ## Project Structure
 

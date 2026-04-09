@@ -244,7 +244,7 @@ function Get-InstallerMessages {
     }
 }
 
-function Pause-Installer {
+function Wait-Installer {
     param(
         [Parameter(Mandatory = $true)]
         [hashtable]$Messages
@@ -821,6 +821,7 @@ function Invoke-UninstallAction {
 }
 
 function Invoke-InstallAction {
+    [CmdletBinding(SupportsShouldProcess = $true)]
     param(
         [Parameter(Mandatory = $true)]
         [hashtable]$Messages
@@ -992,20 +993,20 @@ if ($isInteractiveMenuSession) {
                     $null = Invoke-RequirementsAction -Messages $Messages -UsesAutomaticLocationDetection $usesAutomaticLocationDetection -RequiresVSCodeIntegration $EnableVSCodeThemeSwitch
                     Write-InstallerBlankLine
                     Write-Host $Messages.RequirementsCompleted
-                    Pause-Installer -Messages $Messages
+                    Wait-Installer -Messages $Messages
                     Write-InstallerBlankLine
                     Write-Host $Messages.ReturningToMenu
                 }
                 "Uninstall" {
                     Invoke-UninstallAction -Messages $Messages
-                    Pause-Installer -Messages $Messages
+                    Wait-Installer -Messages $Messages
                     Write-InstallerBlankLine
                     Write-Host $Messages.ReturningToMenu
                 }
                 default {
                     $installResult = Invoke-InstallAction -Messages $Messages
                     Show-InstallSummary -Result $installResult -Messages $Messages
-                    Pause-Installer -Messages $Messages
+                    Wait-Installer -Messages $Messages
                     Write-InstallerBlankLine
                     Write-Host $Messages.ReturningToMenu
                 }
@@ -1013,7 +1014,7 @@ if ($isInteractiveMenuSession) {
         }
         catch {
             Show-InstallerFailure -Messages $Messages -ErrorRecord $_
-            Pause-Installer -Messages $Messages
+            Wait-Installer -Messages $Messages
             Write-InstallerBlankLine
             Write-Host $Messages.ReturningToMenu
         }

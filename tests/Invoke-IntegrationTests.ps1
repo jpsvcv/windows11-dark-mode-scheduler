@@ -59,10 +59,10 @@ try {
     Assert-Condition -Condition (@($requirementResult.Statuses | Where-Object { -not $_.IsMet -and $_.IsCritical }).Count -eq 0) -Message "Critical requirements are missing in this environment."
 
     Write-TestStep "Running a WhatIf install"
-    & $installScript -Action Install -Language en-EN -Latitude $Latitude -Longitude $Longitude -LocationName $LocationName -TimeZoneId $TimeZoneId -TaskPrefix $taskPrefix -InstallRoot $installRoot -VSCodeSettingsPath $vscodeSettingsPath -WhatIf | Out-Null
+    & $installScript -Action Install -Language en-EN -Latitude $Latitude -Longitude $Longitude -LocationName $LocationName -TimeZoneId $TimeZoneId -TaskPrefix $taskPrefix -InstallRoot $installRoot -VSCodeSettingsPath $vscodeSettingsPath -VSCodeDarkTheme "VS Code Dark" -WhatIf | Out-Null
 
     Write-TestStep "Running a real install"
-    $installResult = & $installScript -Action Install -Language en-EN -Latitude $Latitude -Longitude $Longitude -LocationName $LocationName -TimeZoneId $TimeZoneId -TaskPrefix $taskPrefix -InstallRoot $installRoot -VSCodeSettingsPath $vscodeSettingsPath -PassThru
+    $installResult = & $installScript -Action Install -Language en-EN -Latitude $Latitude -Longitude $Longitude -LocationName $LocationName -TimeZoneId $TimeZoneId -TaskPrefix $taskPrefix -InstallRoot $installRoot -VSCodeSettingsPath $vscodeSettingsPath -VSCodeDarkTheme "VS Code Dark" -PassThru
     Assert-Condition -Condition ($null -ne $installResult) -Message "The install step did not return a result."
 
     $configPath = Join-Path $installRoot "config.json"
