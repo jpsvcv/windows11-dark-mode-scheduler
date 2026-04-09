@@ -1180,38 +1180,98 @@ function Invoke-VSCodeThemeRefresh {
     [CmdletBinding()]
     param()
 
-    # Detect running VS Code instances and force theme reload
-    # VS Code CLI is available as: code, code-insiders, codium
-    # We use --update-extensions to trigger a minimal reload that refreshes the theme
+    # Force reload of running VS Code instances to apply theme changes
+    # Uses multiple strategies to ensure VS Code picks up new color theme settings
     
     $codeCommands = @("code", "code-insiders", "codium")
-    $vsCodeInstances = 0
+    $vsCodeInstanceCount = 0
+    $reloadSuccess = $false
 
     foreach ($cmdName in $codeCommands) {
         $cmd = Get-Command $cmdName -ErrorAction SilentlyContinue
         
         if ($null -ne $cmd) {
             try {
-                # Check if there are active instances by getting the process
-                $processes = Get-Process -Name $cmdName.Replace("-", "") -ErrorAction SilentlyContinue
+                # Detect running instances
+                $procName = if ($cmdName -contains "-") { 
+                    $cmdName.Replace("-", "") 
+                } else { 
+                    $cmdName 
+                }
                 
-                if ($processes) {
-                    # Use the VS Code CLI to refresh while workspaces are open
-                    # The --list-extensions command is lightweight and triggers config reload
-                    & $cmd --list-extensions 2>&1 | Out-Null
-                    $vsCodeInstances += @($processes).Count
+                $processes = @(Get-Process -Name $procName -ErrorAction SilentlyContinue)
+                
+                if ($processes.Count -gt 0) {
+                    $vsCodeInstanceCount += $processes.Count
                     
-                    Write-Debug "VS Code ($cmdName) instances detected and refresh signal sent."
+                    # Strategy 1: Use CLI command to reload window (VS Code 1.60+)
+                    # Try multiple command variations
+                    $commandVariants = @(
+                        'workbench.action.reloadWindowWithoutAsking',
+                        'workbench.action.reloadWindow'
+                    )
+                    
+                    foreach ($cmdVariant in $commandVariants) {
+                        try {
+                            & $cmd --command $cmdVariant 2>&1 | Out-Null
+                            $reloadSuccess = $true
+                            Write-Debug "VS Code ($cmdName) reload via command executed: $cmdVariant"
+                            break
+                        }
+                        catch {
+                            Write-Debug "Command $cmdVariant failed: $_"
+                        }
+                    }
+                    
+                    # Strategy 2: If command didn't work, try forcing a settings reload
+                    # by using the CLI with --list-extensions (triggers config reload in some versions)
+                    if (-not $reloadSuccess) {
+                        try {
+                            & $cmd --list-extensions 2>&1 | Out-Null
+                            Write-Debug "VS Code ($cmdName) fallback strategy (list-extensions) executed."
+                        }
+                        catch {
+                            Write-Debug "Fallback strategy also failed: $_"
+                        }
+                    }
+                    
+                    # Strategy 3: Use file system notification
+                    # Touch the settings.json file to trigger file watcher in VS Code
+                    # This is a last-resort attempt to notify VS Code of the change
+                    try {
+                        $settingsPath = Get-DefaultVSCodeSettingsPath
+                        if (Test-Path -LiteralPath $settingsPath) {
+                            # Update file modification time without changing content
+                            (Get-Item -LiteralPath $settingsPath).LastWriteTime = Get-Date
+                            Write-Debug "VS Code settings.json timestamp updated to trigger file watcher."
+                            $reloadSuccess = $true
+                        }
+                    }
+                    catch {
+                        Write-Debug "File timestamp update failed: $_"
+                    }
                 }
             }
             catch {
-                # Silently continue if cannot interact with VS Code
-                Write-Debug "Could not refresh VS Code ($cmdName): $_"
+                Write-Debug "Error processing VS Code ($cmdName): $_"
             }
         }
     }
 
-    return $vsCodeInstances
+    # Return detailed status
+    if ($vsCodeInstanceCount -gt 0) {
+        return [pscustomobject]@{
+            InstancesDetected = $vsCodeInstanceCount
+            ReloadAttempted   = $true
+            ReloadSuccess     = $reloadSuccess
+        }
+    }
+    
+    return [pscustomobject]@{
+        InstancesDetected = 0
+        ReloadAttempted   = $false
+        ReloadSuccess     = $false
+    }
 }
 
 function Invoke-ThemeSwitch {
@@ -1250,9 +1310,15 @@ function Invoke-ThemeSwitch {
             Write-ThemeSwitchLog -LogPath $logPath -Message ("VS Code configured with theme {0} at {1}." -f $vscodeUpdate.Theme, $vscodeUpdate.Path)
             
             # Refresh any running VS Code instances to apply the theme immediately
-            $vsCodeInstanceCount = Invoke-VSCodeThemeRefresh
-            if ($vsCodeInstanceCount -gt 0) {
-                Write-ThemeSwitchLog -LogPath $logPath -Message ("Refreshed {0} running VS Code instance(s) to apply theme change immediately." -f $vsCodeInstanceCount)
+            $vsCodeRefreshResult = Invoke-VSCodeThemeRefresh
+            if ($vsCodeRefreshResult.InstancesDetected -gt 0) {
+                $msg = if ($vsCodeRefreshResult.ReloadAttempted) {
+                    "Reload command sent to {0} running VS Code instance(s). Theme should update shortly." -f $vsCodeRefreshResult.InstancesDetected
+                }
+                else {
+                    "Detected {0} running VS Code instance(s). Please restart windows or reload workspace to apply theme." -f $vsCodeRefreshResult.InstancesDetected
+                }
+                Write-ThemeSwitchLog -LogPath $logPath -Message $msg
             }
         }
         else {
