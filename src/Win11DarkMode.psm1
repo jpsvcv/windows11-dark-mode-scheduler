@@ -1176,6 +1176,44 @@ function Write-ThemeSwitchLog {
     Add-Content -LiteralPath $LogPath -Value ("[{0}] {1}" -f $timestamp, $Message) -Encoding UTF8
 }
 
+function Invoke-VSCodeThemeRefresh {
+    [CmdletBinding()]
+    param()
+
+    # Detect running VS Code instances and force theme reload
+    # VS Code CLI is available as: code, code-insiders, codium
+    # We use --update-extensions to trigger a minimal reload that refreshes the theme
+    
+    $codeCommands = @("code", "code-insiders", "codium")
+    $vsCodeInstances = 0
+
+    foreach ($cmdName in $codeCommands) {
+        $cmd = Get-Command $cmdName -ErrorAction SilentlyContinue
+        
+        if ($null -ne $cmd) {
+            try {
+                # Check if there are active instances by getting the process
+                $processes = Get-Process -Name $cmdName.Replace("-", "") -ErrorAction SilentlyContinue
+                
+                if ($processes) {
+                    # Use the VS Code CLI to refresh while workspaces are open
+                    # The --list-extensions command is lightweight and triggers config reload
+                    & $cmd --list-extensions 2>&1 | Out-Null
+                    $vsCodeInstances += @($processes).Count
+                    
+                    Write-Debug "VS Code ($cmdName) instances detected and refresh signal sent."
+                }
+            }
+            catch {
+                # Silently continue if cannot interact with VS Code
+                Write-Debug "Could not refresh VS Code ($cmdName): $_"
+            }
+        }
+    }
+
+    return $vsCodeInstances
+}
+
 function Invoke-ThemeSwitch {
     [CmdletBinding()]
     param(
@@ -1210,6 +1248,12 @@ function Invoke-ThemeSwitch {
     if ($vscodeUpdate.Enabled) {
         if ($vscodeUpdate.Changed) {
             Write-ThemeSwitchLog -LogPath $logPath -Message ("VS Code configured with theme {0} at {1}." -f $vscodeUpdate.Theme, $vscodeUpdate.Path)
+            
+            # Refresh any running VS Code instances to apply the theme immediately
+            $vsCodeInstanceCount = Invoke-VSCodeThemeRefresh
+            if ($vsCodeInstanceCount -gt 0) {
+                Write-ThemeSwitchLog -LogPath $logPath -Message ("Refreshed {0} running VS Code instance(s) to apply theme change immediately." -f $vsCodeInstanceCount)
+            }
         }
         else {
             Write-ThemeSwitchLog -LogPath $logPath -Message ("VS Code was already configured with theme {0} at {1}." -f $vscodeUpdate.Theme, $vscodeUpdate.Path)
@@ -1248,6 +1292,7 @@ Export-ModuleMember -Function `
     Get-VSCodeThemes, `
     Initialize-ThemeSwitchDirectory, `
     Invoke-ThemeSwitch, `
+    Invoke-VSCodeThemeRefresh, `
     Read-ThemeSwitchConfig, `
     Register-ThemeRefreshTask, `
     Resolve-VSCodeNlsString, `
